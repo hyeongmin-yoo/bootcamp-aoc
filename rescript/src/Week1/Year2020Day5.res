@@ -14,6 +14,10 @@ let splitCode = (seatCode): splitedCode => {
   (row, col)
 }
 
+// type row = F | B
+// type col = L | R
+
+// row -> int
 let calcRowPos = (code: rowCode): int => {
   let (row, _) =
     code
@@ -29,6 +33,7 @@ let calcRowPos = (code: rowCode): int => {
   row
 }
 
+// col -> int
 let calcColPos = (code: colCode): int => {
   let (col, _) =
     code
@@ -54,15 +59,18 @@ let toSeatId = (coord): seatId => {
 }
 
 let findHighest = (seatIds: array<seatId>): seatId => {
-  // -1 보다는 option이 좋을까...?
+  // -1 보다는 option이 좋을까... // -> -Inifinity // -> Math.max many_int
   seatIds->Belt.Array.reduce(-1, (prev, seatId) => {
     Js.Math.max_int(prev, seatId)
   })
 }
 
+// sliding window
+// input -> array<(pre, curr)> -> ((pre, curr) => curr-pre > 1)
+
 type findingCase = Start | Process(int) | Found(int)
 let findBlankId = (seatIds: array<seatId>): option<seatId> => {
-  // 중도에 일찍 반환할 수 있다면 좋을 듯.
+  // 중도에 일찍 반환할 수 있다면 좋을 듯. // -> 재귀
   let findingCase = seatIds->Belt.Array.reduce(Start, (prev: findingCase, seatId) => {
     switch prev {
     | Found(id) => Found(id)
@@ -92,21 +100,27 @@ let main = () => {
   // 인풋을 배열문자열로 변환함
   // string => array<string>
   ->Util.Input.toArray
+
   // 각 배열에서 문자열을 행,열로 분리
   // map(string => splitedCode) // splitedCode: (rowCode: string, colCode: string)
   ->Array.map(splitCode)
+
   // 분리된 행,열 문자열을 좌표로 변환
   // map(splitedCode => coord) // coord: (int, int)
   ->Array.map(toSeatCoord)
+
   // 좌표를 seatID로 변환
   // map(coord => seatId) // seatId: int
   ->Array.map(toSeatId)
+
   // 순차적으로 없는 항목을 찾기 위해 id 정렬
   // array<seatId> => array<seatId>
   ->SortArray.stableSortBy((a, b) => a - b)
+
   // 빈 값을 찾아서 반환
   // array<seatId> => option<seatId>
   ->findBlankId
+
   // 출력
   ->Js.log
 }
