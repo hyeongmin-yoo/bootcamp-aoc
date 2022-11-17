@@ -2,10 +2,121 @@
 'use strict';
 
 var Fs = require("fs");
+var Curry = require("rescript/lib/js/curry.js");
+var Js_math = require("rescript/lib/js/js_math.js");
+var Belt_Array = require("rescript/lib/js/belt_Array.js");
+var Caml_int32 = require("rescript/lib/js/caml_int32.js");
+var Belt_Option = require("rescript/lib/js/belt_Option.js");
 
-var input = Fs.readFileSync("input/Week1/Year2020Day3.sample.txt", "utf8");
+function toArray(str) {
+  return Array.from(str);
+}
 
-console.log(input);
+function tap(arr, fn) {
+  return Belt_Array.map(arr, (function (it) {
+                Curry._1(fn, it);
+                return it;
+              }));
+}
 
-exports.input = input;
-/* input Not a pure module */
+function count(arr) {
+  return Belt_Array.reduce(arr, 0, (function (result, param) {
+                return result + 1 | 0;
+              }));
+}
+
+function multipyAll(arr) {
+  return Belt_Array.reduce(arr, 1.0, (function (result, val) {
+                return result * val;
+              }));
+}
+
+function toGrid(str) {
+  return str.trim().split("\n").map(toArray);
+}
+
+function makeCmds(slope, grid) {
+  var size = Js_math.ceil_int((grid.length - 1 | 0) / slope[1]);
+  return Belt_Array.make(size, slope);
+}
+
+function mapToPos(positions) {
+  return Belt_Array.reduce(positions, [], (function (arr, cmdPos) {
+                var prev = Belt_Array.get(arr, arr.length - 1 | 0);
+                var pos = prev !== undefined ? [
+                    cmdPos[0] + prev[0] | 0,
+                    cmdPos[1] + prev[1] | 0
+                  ] : cmdPos;
+                return Belt_Array.concat(arr, [pos]);
+              }));
+}
+
+function findChar(pos, grid) {
+  return Belt_Option.flatMap(Belt_Option.map(Belt_Array.get(grid, 0), (function (prim) {
+                    return prim.length;
+                  })), (function (width) {
+                var x = Caml_int32.mod_(pos[0], width);
+                return Belt_Option.flatMap(Belt_Array.get(grid, pos[1]), (function (__x) {
+                              return Belt_Array.get(__x, x);
+                            }));
+              }));
+}
+
+function isTree($$char) {
+  return $$char === "#";
+}
+
+function countTrees(slope, grid) {
+  return count(Belt_Array.keep(Belt_Array.keepMap(mapToPos(makeCmds(slope, grid)), (function (__x) {
+                        return findChar(__x, grid);
+                      })), (function (c) {
+                    return c === "#";
+                  })));
+}
+
+function main(param) {
+  var input = Fs.readFileSync("input/Week1/Year2020Day3.sample2.txt", "utf8");
+  var grid = toGrid(input);
+  var slopes = [
+    [
+      1,
+      1
+    ],
+    [
+      3,
+      1
+    ],
+    [
+      5,
+      1
+    ],
+    [
+      7,
+      1
+    ],
+    [
+      1,
+      2
+    ]
+  ];
+  console.log(multipyAll(Belt_Array.map(Belt_Array.map(slopes, (function (__x) {
+                      return countTrees(__x, grid);
+                    })), (function (prim) {
+                  return prim;
+                }))));
+}
+
+main(undefined);
+
+exports.toArray = toArray;
+exports.tap = tap;
+exports.count = count;
+exports.multipyAll = multipyAll;
+exports.toGrid = toGrid;
+exports.makeCmds = makeCmds;
+exports.mapToPos = mapToPos;
+exports.findChar = findChar;
+exports.isTree = isTree;
+exports.countTrees = countTrees;
+exports.main = main;
+/*  Not a pure module */
