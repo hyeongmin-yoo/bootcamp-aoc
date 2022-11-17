@@ -3,7 +3,10 @@ type rowCode = string // "FBFBFBF"
 type colCode = string // "LRL"
 type splitedCode = (rowCode, colCode) // ("FBFBFBF", "LRL")
 type seatId = int
-type coord = (int, int)
+
+type row = int
+type col = int
+type coord = (row, col)
 
 let splitCode = (seatCode): splitedCode => {
   let row = seatCode->Js.String2.slice(~from=0, ~to_=7)
@@ -57,10 +60,29 @@ let findHighest = (seatIds: array<seatId>): seatId => {
   })
 }
 
+type findingCase = Start | Process(int) | Found(int)
+let findBlankId = (seatIds: array<seatId>): option<seatId> => {
+  // 중도에 일찍 반환할 수 있다면 좋을 듯.
+  let findingCase = seatIds->Belt.Array.reduce(Start, (prev: findingCase, seatId) => {
+    switch prev {
+    | Found(id) => Found(id)
+    | Process(id) if seatId - id > 1 => Found(seatId - 1)
+    | _ => Process(seatId)
+    }
+  })
+
+  switch findingCase {
+  | Found(val) => Some(val)
+  | _ => None
+  }
+}
+
 /*
 - 10개의 문자열을 파싱하여 좌석 위치를 알아낸다.
 - 좌석 위치는 seat ID로 치환 됨.
-- 입력값들을 모두 seat ID로 변환 후 가장 높은 seat ID를 반환함
+- 입력값들을 모두 seat ID로 변환 후 
+- part1: 가장 높은 seat ID를 반환함
+- part2: 순차적인 목록에서 비어있는 seat ID 반환
 */
 let main = () => {
   open Belt
@@ -71,16 +93,20 @@ let main = () => {
   // string => array<string>
   ->Util.Input.toArray
   // 각 배열에서 문자열을 행,열로 분리
-  // map(string => splitedCode)
+  // map(string => splitedCode) // splitedCode: (rowCode: string, colCode: string)
   ->Array.map(splitCode)
   // 분리된 행,열 문자열을 좌표로 변환
-  // map(splitedCode => coord)
+  // map(splitedCode => coord) // coord: (int, int)
   ->Array.map(toSeatCoord)
   // 좌표를 seatID로 변환
-  // map(coord => seatId)
+  // map(coord => seatId) // seatId: int
   ->Array.map(toSeatId)
-  // 가장 높은 값을 반환
-  ->findHighest
+  // 순차적으로 없는 항목을 찾기 위해 id 정렬
+  // array<seatId> => array<seatId>
+  ->SortArray.stableSortBy((a, b) => a - b)
+  // 빈 값을 찾아서 반환
+  // array<seatId> => option<seatId>
+  ->findBlankId
   // 출력
   ->Js.log
 }

@@ -4,6 +4,7 @@
 var Fs = require("fs");
 var Util = require("../Util.js");
 var Belt_Array = require("rescript/lib/js/belt_Array.js");
+var Belt_SortArray = require("rescript/lib/js/belt_SortArray.js");
 
 function splitCode(seatCode) {
   var row = seatCode.slice(0, 7);
@@ -79,9 +80,44 @@ function findHighest(seatIds) {
               }));
 }
 
+function findBlankId(seatIds) {
+  var findingCase = Belt_Array.reduce(seatIds, /* Start */0, (function (prev, seatId) {
+          if (typeof prev === "number") {
+            return {
+                    TAG: /* Process */0,
+                    _0: seatId
+                  };
+          } else if (prev.TAG === /* Process */0) {
+            if ((seatId - prev._0 | 0) > 1) {
+              return {
+                      TAG: /* Found */1,
+                      _0: seatId - 1 | 0
+                    };
+            } else {
+              return {
+                      TAG: /* Process */0,
+                      _0: seatId
+                    };
+            }
+          } else {
+            return {
+                    TAG: /* Found */1,
+                    _0: prev._0
+                  };
+          }
+        }));
+  if (typeof findingCase === "number" || findingCase.TAG === /* Process */0) {
+    return ;
+  } else {
+    return findingCase._0;
+  }
+}
+
 function main(param) {
   var input = Fs.readFileSync("input/Week1/Year2020Day5.input.txt", "utf8");
-  console.log(findHighest(Belt_Array.map(Belt_Array.map(Belt_Array.map(Util.Input.toArray(input), splitCode), toSeatCoord), toSeatId)));
+  console.log(findBlankId(Belt_SortArray.stableSortBy(Belt_Array.map(Belt_Array.map(Belt_Array.map(Util.Input.toArray(input), splitCode), toSeatCoord), toSeatId), (function (a, b) {
+                  return a - b | 0;
+                }))));
 }
 
 main(undefined);
@@ -92,5 +128,6 @@ exports.calcColPos = calcColPos;
 exports.toSeatCoord = toSeatCoord;
 exports.toSeatId = toSeatId;
 exports.findHighest = findHighest;
+exports.findBlankId = findBlankId;
 exports.main = main;
 /*  Not a pure module */
