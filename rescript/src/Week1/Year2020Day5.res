@@ -1,56 +1,84 @@
-type seatCode = string // "FBFBFBFLRL"
-type rowCode = string // "FBFBFBF"
-type colCode = string // "LRL"
-type splitedCode = (rowCode, colCode) // ("FBFBFBF", "LRL")
+type row = F | B
+type col = L | R
+type seatCode = (array<row>, array<col>)
 type seatId = int
 
-type row = int
-type col = int
-type coord = (row, col)
+type coord = (int, int)
+type parseResult<'a> = result<array<'a>, string>
 
-let splitCode = (seatCode): splitedCode => {
-  let row = seatCode->Js.String2.slice(~from=0, ~to_=7)
-  let col = seatCode->Js.String2.sliceToEnd(~from=7)
-  (row, col)
+let makeParser = (parseChar: string => result<'a, string>, input): parseResult<'a> => {
+  // chars: ["F", "B", "F"...]
+  let rec parse = (chars: array<string>, prev: parseResult<'a>) => {
+    open Belt
+    chars
+    ->Array.get(0)
+    ->Option.map(char =>
+      char
+      ->parseChar
+      ->Result.flatMap(unit => prev->Result.map(Array.concat(_, [unit])))
+      ->Result.flatMap(units => parse(chars->Array.sliceToEnd(1), Ok(units)))
+    )
+    ->Option.getWithDefault(prev)
+  }
+
+  parse(input->Util.String.toArray, Ok([]))
 }
 
-// type row = F | B
-// type col = L | R
+let parseRow = makeParser(char => {
+  switch char {
+  | "F" => Ok(F)
+  | "B" => Ok(B)
+  | _ => Error("unexpected character")
+  }
+})
 
-// row -> int
-let calcRowPos = (code: rowCode): int => {
-  let (row, _) =
-    code
-    ->Util.String.toArray
-    ->Belt.Array.reduce((0, 127), (prev, code) => {
-      let (start, end) = prev
-      switch code {
-      | "F" => (start, (end - start) / 2 + start)
-      | "B" => ((end - start + 1) / 2 + start, end)
-      | _ => prev
-      }
+let parseCol = makeParser(char => {
+  switch char {
+  | "L" => Ok(L)
+  | "R" => Ok(R)
+  | _ => Error("unexpected character")
+  }
+})
+
+let parseSeatCode = (text): result<seatCode, string> => {
+  if text->Js.String2.length != 10 {
+    Error("invalid input size")
+  } else {
+    let (rowText, colText) = text->Util.String.divide(7)
+
+    rowText
+    ->parseRow
+    ->Belt.Result.flatMap(row => {
+      colText->parseCol->Belt.Result.flatMap(col => Ok(row, col))
     })
-  row
+  }
+}
+
+let calcRowPos = (rows: array<row>): int => {
+  let (rowNum, _) = rows->Belt.Array.reduce((0, 127), (prev, code) => {
+    let (start, end) = prev
+    switch code {
+    | F => (start, (end - start) / 2 + start)
+    | B => ((end - start + 1) / 2 + start, end)
+    }
+  })
+  rowNum
 }
 
 // col -> int
-let calcColPos = (code: colCode): int => {
-  let (col, _) =
-    code
-    ->Util.String.toArray
-    ->Belt.Array.reduce((0, 7), (prev, code) => {
-      let (start, end) = prev
-      switch code {
-      | "L" => (start, (end - start) / 2 + start)
-      | "R" => ((end - start + 1) / 2 + start, end)
-      | _ => prev
-      }
-    })
-  col
+let calcColPos = (cols: array<col>): int => {
+  let (colNum, _) = cols->Belt.Array.reduce((0, 7), (prev, code) => {
+    let (start, end) = prev
+    switch code {
+    | L => (start, (end - start) / 2 + start)
+    | R => ((end - start + 1) / 2 + start, end)
+    }
+  })
+  colNum
 }
 
-let toSeatCoord = ((rowCode, colCode): splitedCode): coord => {
-  (calcRowPos(rowCode), calcColPos(colCode))
+let toSeatCoord = ((rows, cols): seatCode): coord => {
+  (calcRowPos(rows), calcColPos(cols))
 }
 
 let toSeatId = (coord): seatId => {
@@ -58,31 +86,29 @@ let toSeatId = (coord): seatId => {
   row * 8 + col
 }
 
-let findHighest = (seatIds: array<seatId>): seatId => {
-  // -1 보다는 option이 좋을까... // -> -Inifinity // -> Math.max many_int
-  seatIds->Belt.Array.reduce(-1, (prev, seatId) => {
-    Js.Math.max_int(prev, seatId)
-  })
+let parseSeatId = text => {
+  open Belt
+  text
+  // string => seatCode // seatCode: (array<row>, array<col>)
+  ->parseSeatCode
+
+  // 분리된 행,열 문자열을 좌표로 변환
+  // (seatCode => coord) // coord: (int, int)
+  ->Result.map(toSeatCoord)
+
+  // 좌표를 seatID로 변환
+  // map(coord => seatId) // seatId: int
+  ->Result.map(toSeatId)
 }
 
-// sliding window
-// input -> array<(pre, curr)> -> ((pre, curr) => curr-pre > 1)
-
-type findingCase = Start | Process(int) | Found(int)
-let findBlankId = (seatIds: array<seatId>): option<seatId> => {
-  // 중도에 일찍 반환할 수 있다면 좋을 듯. // -> 재귀
-  let findingCase = seatIds->Belt.Array.reduce(Start, (prev: findingCase, seatId) => {
-    switch prev {
-    | Found(id) => Found(id)
-    | Process(id) if seatId - id > 1 => Found(seatId - 1)
-    | _ => Process(seatId)
-    }
-  })
-
-  switch findingCase {
-  | Found(val) => Some(val)
-  | _ => None
-  }
+let rec findMissingId = (seatIds: array<seatId>): option<seatId> => {
+  open Belt
+  seatIds
+  ->Array.get(0)
+  ->Option.flatMap(current => seatIds->Array.get(1)->Option.map(next => (current, next)))
+  ->Option.flatMap(((current, next)) =>
+    next - current > 1 ? Some(current + 1) : findMissingId(seatIds->Array.sliceToEnd(1))
+  )
 }
 
 /*
@@ -101,17 +127,14 @@ let main = () => {
   // string => array<string>
   ->Util.Input.toArray
 
-  // 각 배열에서 문자열을 행,열로 분리
-  // map(string => splitedCode) // splitedCode: (rowCode: string, colCode: string)
-  ->Array.map(splitCode)
+  // 문자열을 Id로 파싱
+  // map(string => result<seatId, string>) // seatId: int
+  ->Array.map(parseSeatId)
 
-  // 분리된 행,열 문자열을 좌표로 변환
-  // map(splitedCode => coord) // coord: (int, int)
-  ->Array.map(toSeatCoord)
-
-  // 좌표를 seatID로 변환
-  // map(coord => seatId) // seatId: int
-  ->Array.map(toSeatId)
+  // 실패한 값을 필터링하고 result 에서 값을 꺼냄.
+  // TODO: array<result> 조합에서 Error가 하나라도 있는 경우 Error 처리를 하고 싶다면...?
+  // result<seatId, string> => option<seatId> => seatId
+  ->Array.keepMap(Util.Result.toOption)
 
   // 순차적으로 없는 항목을 찾기 위해 id 정렬
   // array<seatId> => array<seatId>
@@ -119,7 +142,7 @@ let main = () => {
 
   // 빈 값을 찾아서 반환
   // array<seatId> => option<seatId>
-  ->findBlankId
+  ->findMissingId
 
   // 출력
   ->Js.log
