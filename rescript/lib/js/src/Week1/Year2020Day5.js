@@ -173,9 +173,11 @@ function findMissingId(seatIds) {
 
 function main(param) {
   var input = Fs.readFileSync("input/Week1/Year2020Day5.input.txt", "utf8");
-  console.log(findMissingId(Belt_SortArray.stableSortBy(Belt_Array.keepMap(Belt_Array.map(Util.Input.toArray(input), parseSeatId), Util.Result.toOption), (function (a, b) {
-                  return a - b | 0;
-                }))));
+  Util.Result.print(Belt_Result.map(Belt_Result.map(Util.Result.traverse(Belt_Array.map(Util.Input.toArray(input), parseSeatId)), (function (arr) {
+                  return Belt_SortArray.stableSortBy(arr, (function (a, b) {
+                                return a - b | 0;
+                              }));
+                })), findMissingId));
 }
 
 main(undefined);

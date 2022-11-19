@@ -131,21 +131,20 @@ let main = () => {
   // map(string => result<seatId, string>) // seatId: int
   ->Array.map(parseSeatId)
 
-  // 실패한 값을 필터링하고 result 에서 값을 꺼냄.
-  // TODO: array<result> 조합에서 Error가 하나라도 있는 경우 Error 처리를 하고 싶다면...?
-  // result<seatId, string> => option<seatId> => seatId
-  ->Array.keepMap(Util.Result.toOption)
+  // 문자열들이 모두 파싱되었는지 확인 후 아니면 Error
+  // array<result<seatId, string> => result<array<seatId>, string>
+  ->Util.Result.traverse
 
   // 순차적으로 없는 항목을 찾기 위해 id 정렬
   // array<seatId> => array<seatId>
-  ->SortArray.stableSortBy((a, b) => a - b)
+  ->Result.map(arr => SortArray.stableSortBy(arr, (a, b) => a - b))
 
   // 빈 값을 찾아서 반환
   // array<seatId> => option<seatId>
-  ->findMissingId
+  ->Result.map(findMissingId)
 
   // 출력
-  ->Js.log
+  ->Util.Result.print
 }
 
 let _ = main()

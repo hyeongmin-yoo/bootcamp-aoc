@@ -7,30 +7,39 @@ var Belt_Array = require("rescript/lib/js/belt_Array.js");
 var Belt_Option = require("rescript/lib/js/belt_Option.js");
 var Belt_SortArray = require("rescript/lib/js/belt_SortArray.js");
 
+function toBinaryFloat(raw) {
+  var num = Number("0b" + raw + "");
+  if (num === NaN) {
+    return ;
+  } else {
+    return num;
+  }
+}
+
 function parseSeatId(text) {
-  var nums = Belt_Array.keepMap(Belt_Array.map(Util.$$String.toArray(text), (function ($$char) {
-                switch ($$char) {
-                  case "F" :
-                  case "L" :
-                      return {
-                              TAG: /* Ok */0,
-                              _0: "0"
-                            };
-                  case "B" :
-                  case "R" :
-                      return {
-                              TAG: /* Ok */0,
-                              _0: "1"
-                            };
-                  default:
-                    return {
-                            TAG: /* Error */1,
-                            _0: "unexpected letter"
-                          };
-                }
-              })), Util.Result.toOption).join("");
-  var num = Number("0b" + nums + "");
-  return Belt_Option.map(num === NaN ? undefined : num, (function (prim) {
+  return Belt_Option.map(Belt_Option.flatMap(Belt_Option.map(Util.Result.toOption(Util.Result.traverse(Belt_Array.map(Util.$$String.toArray(text), (function ($$char) {
+                                    switch ($$char) {
+                                      case "F" :
+                                      case "L" :
+                                          return {
+                                                  TAG: /* Ok */0,
+                                                  _0: "0"
+                                                };
+                                      case "B" :
+                                      case "R" :
+                                          return {
+                                                  TAG: /* Ok */0,
+                                                  _0: "1"
+                                                };
+                                      default:
+                                        return {
+                                                TAG: /* Error */1,
+                                                _0: "unexpected letter"
+                                              };
+                                    }
+                                  })))), (function (arr) {
+                        return arr.join("");
+                      })), toBinaryFloat), (function (prim) {
                 return prim | 0;
               }));
 }
@@ -62,6 +71,7 @@ function main(param) {
 
 main(undefined);
 
+exports.toBinaryFloat = toBinaryFloat;
 exports.parseSeatId = parseSeatId;
 exports.findMissingId = findMissingId;
 exports.main = main;

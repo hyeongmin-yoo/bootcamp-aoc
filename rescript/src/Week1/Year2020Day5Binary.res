@@ -1,5 +1,10 @@
 type seatId = int
 
+let toBinaryFloat = raw => {
+  let num = Js.Float.fromString(`0b${raw}`)
+  num == Js.Float._NaN ? None : Some(num)
+}
+
 let parseSeatId = (text): option<seatId> => {
   text
   ->Util.String.toArray
@@ -10,11 +15,12 @@ let parseSeatId = (text): option<seatId> => {
     | _ => Error("unexpected letter")
     }
   )
-  // array<either> -> either<array, string> 하고 싶지만...ㅎ
-  ->Belt.Array.keepMap(Util.Result.toOption)
-  ->Js.Array2.joinWith("")
-  ->(nums => Js.Float.fromString(`0b${nums}`))
-  ->(num => num == Js.Float._NaN ? None : Some(num))
+  // array<either> -> either<array<string>, string>
+  ->Util.Result.traverse
+  // either<array<string>, string> -> option<array<string>>
+  ->Util.Result.toOption
+  ->Belt.Option.map(arr => Js.Array2.joinWith(arr, ""))
+  ->Belt.Option.flatMap(toBinaryFloat)
   ->Belt.Option.map(Belt.Float.toInt)
 }
 
