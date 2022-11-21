@@ -33,15 +33,22 @@ module Result = {
     | Error(_) => None
     }
   }
+  let fromOption = (option: option<'a>, fromNone: result<'a, 'b>): result<'a, 'b> => {
+    switch option {
+    | Some(val) => Ok(val)
+    | None => fromNone
+    }
+  }
   let traverse = (results: array<result<'a, 'b>>): result<array<'a>, 'b> => {
     results->Belt.Array.reduce(Ok([]), (r, it) =>
       r->Belt.Result.flatMap(prev => it->Belt.Result.map(val => prev->Belt.Array.concat([val])))
     )
   }
-  let fold = (result: result<'a, 'b>, err: 'b => unit, ok: 'a => unit): unit => {
+
+  let print = result => {
     switch result {
-    | Ok(val) => ok(val)
-    | Error(val) => err(val)
+    | Ok(val) => Js.log2("Ok:", val)
+    | Error(val) => Js.log2("Err:", val)
     }
   }
 }

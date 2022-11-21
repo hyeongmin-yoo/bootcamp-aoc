@@ -50,6 +50,17 @@ function toOption(result) {
   
 }
 
+function fromOption(option, fromNone) {
+  if (option !== undefined) {
+    return {
+            TAG: /* Ok */0,
+            _0: Caml_option.valFromOption(option)
+          };
+  } else {
+    return fromNone;
+  }
+}
+
 function traverse(results) {
   return Belt_Array.reduce(results, {
               TAG: /* Ok */0,
@@ -63,18 +74,19 @@ function traverse(results) {
               }));
 }
 
-function fold(result, err, ok) {
+function print(result) {
   if (result.TAG === /* Ok */0) {
-    return Curry._1(ok, result._0);
-  } else {
-    return Curry._1(err, result._0);
+    console.log("Ok:", result._0);
+    return ;
   }
+  console.log("Err:", result._0);
 }
 
 var Result = {
   toOption: toOption,
+  fromOption: fromOption,
   traverse: traverse,
-  fold: fold
+  print: print
 };
 
 exports.$$Array = $$Array;
