@@ -44,6 +44,12 @@ module Result = {
       r->Belt.Result.flatMap(prev => it->Belt.Result.map(val => prev->Belt.Array.concat([val])))
     )
   }
+  let swap = (result: result<'a, 'b>): result<'b, 'a> => {
+    switch result {
+    | Ok(val) => Error(val)
+    | Error(val) => Ok(val)
+    }
+  }
 
   let print = result => {
     switch result {
@@ -51,4 +57,16 @@ module Result = {
     | Error(val) => Js.log2("Err:", val)
     }
   }
+}
+
+module Option = {
+  let traverse = (items: array<option<'a>>): option<array<'a>> => {
+    items->Belt.Array.reduce(Some([]), (acc, it) => {
+      acc->Belt.Option.flatMap(prev => it->Belt.Option.map(val => prev->Belt.Array.concat([val])))
+    })
+  }
+}
+
+module Range = {
+  let inRange = (val, min, max) => min <= val && val <= max
 }

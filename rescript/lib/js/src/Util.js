@@ -2,7 +2,9 @@
 'use strict';
 
 var Curry = require("rescript/lib/js/curry.js");
+var Caml_obj = require("rescript/lib/js/caml_obj.js");
 var Belt_Array = require("rescript/lib/js/belt_Array.js");
+var Belt_Option = require("rescript/lib/js/belt_Option.js");
 var Belt_Result = require("rescript/lib/js/belt_Result.js");
 var Caml_option = require("rescript/lib/js/caml_option.js");
 
@@ -74,6 +76,20 @@ function traverse(results) {
               }));
 }
 
+function swap(result) {
+  if (result.TAG === /* Ok */0) {
+    return {
+            TAG: /* Error */1,
+            _0: result._0
+          };
+  } else {
+    return {
+            TAG: /* Ok */0,
+            _0: result._0
+          };
+  }
+}
+
 function print(result) {
   if (result.TAG === /* Ok */0) {
     console.log("Ok:", result._0);
@@ -86,11 +102,40 @@ var Result = {
   toOption: toOption,
   fromOption: fromOption,
   traverse: traverse,
+  swap: swap,
   print: print
+};
+
+function traverse$1(items) {
+  return Belt_Array.reduce(items, [], (function (acc, it) {
+                return Belt_Option.flatMap(acc, (function (prev) {
+                              return Belt_Option.map(it, (function (val) {
+                                            return Belt_Array.concat(prev, [val]);
+                                          }));
+                            }));
+              }));
+}
+
+var $$Option = {
+  traverse: traverse$1
+};
+
+function inRange(val, min, max) {
+  if (Caml_obj.lessequal(min, val)) {
+    return Caml_obj.lessequal(val, max);
+  } else {
+    return false;
+  }
+}
+
+var $$Range = {
+  inRange: inRange
 };
 
 exports.$$Array = $$Array;
 exports.Input = Input;
 exports.$$String = $$String;
 exports.Result = Result;
+exports.$$Option = $$Option;
+exports.$$Range = $$Range;
 /* No side effect */
