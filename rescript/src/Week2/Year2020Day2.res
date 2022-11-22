@@ -12,65 +12,51 @@ let inRange = (target, (min, max): pair) => {
 }
 
 // "1-3" -> (1, 3)
-let parsePair = input => {
+let parsePair = (input): result<pair, string> => {
   // 문자열 배열로 분리 ("1-3") => ["1", "3"]
-  let nums = input->Js.String2.trim->Js.String2.split("-")
+  let nums = input->Js.String2.trim->Js.String2.split("-")->Array.map(Int.fromString)
 
-  nums
-  ->Array.get(0)
-  ->Option.flatMap(Int.fromString)
-  ->Option.flatMap(min =>
-    nums->Array.get(1)->Option.flatMap(Int.fromString)->Option.map(max => (min, max))
-  )
+  switch nums {
+  | [Some(first), Some(last)] => Ok((first, last))
+  | _ => Error(`failed to parse pair: ${input}`)
+  }
 }
 
 // "1-3 a: aaaa" -> result<password>
 let parsePassword = (input): result<password, string> => {
-  // 정규 표현식에 맞춰서 배열을 반환
-  %re("/^(\d+-\d+) (\w): (\w+)/")
-  ->Js.Re.exec_(input)
-  ->Option.map(Js.Re.captures)
-  ->Option.flatMap(matches => {
-    /*
-    TODO: 여러개의 options 병합하여 계산 시 .flatMap 으로 합쳐가면서 꺼내는 방법말곤 없는 지.
- */
-    let rangeMatched = matches[1]->Option.flatMap(Js.Nullable.toOption)
-    let charMatched = matches[2]->Option.flatMap(Js.Nullable.toOption)
-    let valueMatched = matches[3]->Option.flatMap(Js.Nullable.toOption)
+  let matches =
+    %re("/^(\d+-\d+) (\w): (\w+)/")
+    ->Js.Re.exec_(input)
+    ->Option.map(Js.Re.captures)
+    ->Option.map(Array.map(_, Js.Nullable.toOption))
 
-    rangeMatched
-    ->Option.flatMap(parsePair)
-    ->Option.flatMap(pair => charMatched->Option.map(char => (pair, char)))
-    ->Option.flatMap(((pair, char)) => valueMatched->Option.map(value => {pair, char, value}))
-  })
-  ->Util.Result.fromOption(Error(`invalid input: ${input}`))
+  switch matches {
+  | Some([_, Some(pairStr), Some(char), Some(value)]) =>
+    pairStr->parsePair->Result.map(pair => {pair, char, value})
+  | _ => Error(`failed to parse password: ${input}`)
+  }
 }
 
 let isValid1 = password => {
-  let {char, pair, value} = password
+  let {pair, char, value} = password
   let charLength = value->Js.String2.split("")->Array.keep(String.equal(char))->Array.length
   charLength->inRange(pair)
 }
 
 let isValid2 = password => {
-  let {char, pair, value} = password
+  let {pair, char, value} = password
   let (firstIdx, lastIdx) = pair
   let chars = value->Js.String2.split("")
 
-  chars
-  // 첫번째 인덱스의 문자열을 가져와 대상 문자열과 맞는지 bool
-  ->Array.get(firstIdx - 1)
-  ->Option.map(String.equal(char))
-  ->Option.flatMap(firstMatched =>
-    chars
-    // 마지막 인덱스의 문자열을 가져와 비교 bool
-    ->Array.get(lastIdx - 1)
-    ->Option.map(String.equal(char))
-    // 앞의 매칭과 뒤의 매칭이 동일하지 않아야 함 (둘 중 하나만 true)
-    ->Option.map(lastMatched => firstMatched != lastMatched)
+  let matches = (
+    chars->Array.get(firstIdx - 1)->Option.map(String.equal(char)),
+    chars->Array.get(lastIdx - 1)->Option.map(String.equal(char)),
   )
-  // 둘 중 하나라도 값이 없다면 false.
-  ->Option.getWithDefault(false)
+
+  switch matches {
+  | (Some(first), Some(last)) => first != last
+  | _ => false
+  }
 }
 
 let part1 = input => {

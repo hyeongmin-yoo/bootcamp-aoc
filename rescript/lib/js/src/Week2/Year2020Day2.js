@@ -19,64 +19,67 @@ function inRange(target, param) {
 }
 
 function parsePair(input) {
-  var nums = input.trim().split("-");
-  return Belt_Option.flatMap(Belt_Option.flatMap(Belt_Array.get(nums, 0), Belt_Int.fromString), (function (min) {
-                return Belt_Option.map(Belt_Option.flatMap(Belt_Array.get(nums, 1), Belt_Int.fromString), (function (max) {
-                              return [
-                                      min,
-                                      max
-                                    ];
-                            }));
-              }));
+  var nums = Belt_Array.map(input.trim().split("-"), Belt_Int.fromString);
+  if (nums.length === 2) {
+    var first = nums[0];
+    if (first !== undefined) {
+      var last = nums[1];
+      if (last !== undefined) {
+        return {
+                TAG: /* Ok */0,
+                _0: [
+                  first,
+                  last
+                ]
+              };
+      }
+      
+    }
+    
+  }
+  return {
+          TAG: /* Error */1,
+          _0: "failed to parse pair: " + input + ""
+        };
 }
 
 function parsePassword(input) {
-  return Util.Result.fromOption(Belt_Option.flatMap(Belt_Option.map(Caml_option.null_to_opt(/^(\d+-\d+) (\w): (\w+)/.exec(input)), (function (prim) {
-                        return prim;
-                      })), (function (matches) {
-                    var rangeMatched = Belt_Option.flatMap(Belt_Array.get(matches, 1), (function (prim) {
-                            if (prim == null) {
-                              return ;
-                            } else {
-                              return Caml_option.some(prim);
-                            }
-                          }));
-                    var charMatched = Belt_Option.flatMap(Belt_Array.get(matches, 2), (function (prim) {
-                            if (prim == null) {
-                              return ;
-                            } else {
-                              return Caml_option.some(prim);
-                            }
-                          }));
-                    var valueMatched = Belt_Option.flatMap(Belt_Array.get(matches, 3), (function (prim) {
-                            if (prim == null) {
-                              return ;
-                            } else {
-                              return Caml_option.some(prim);
-                            }
-                          }));
-                    return Belt_Option.flatMap(Belt_Option.flatMap(Belt_Option.flatMap(rangeMatched, parsePair), (function (pair) {
-                                      return Belt_Option.map(charMatched, (function ($$char) {
-                                                    return [
-                                                            pair,
-                                                            $$char
-                                                          ];
-                                                  }));
-                                    })), (function (param) {
-                                  var $$char = param[1];
-                                  var pair = param[0];
-                                  return Belt_Option.map(valueMatched, (function (value) {
-                                                return {
-                                                        pair: pair,
-                                                        char: $$char,
-                                                        value: value
-                                                      };
-                                              }));
-                                }));
-                  })), {
-              TAG: /* Error */1,
-              _0: "invalid input: " + input + ""
-            });
+  var matches = Belt_Option.map(Belt_Option.map(Caml_option.null_to_opt(/^(\d+-\d+) (\w): (\w+)/.exec(input)), (function (prim) {
+              return prim;
+            })), (function (__x) {
+          return Belt_Array.map(__x, (function (prim) {
+                        if (prim == null) {
+                          return ;
+                        } else {
+                          return Caml_option.some(prim);
+                        }
+                      }));
+        }));
+  if (matches !== undefined && matches.length === 4) {
+    var pairStr = matches[1];
+    if (pairStr !== undefined) {
+      var $$char = matches[2];
+      if ($$char !== undefined) {
+        var value = matches[3];
+        if (value !== undefined) {
+          return Belt_Result.map(parsePair(pairStr), (function (pair) {
+                        return {
+                                pair: pair,
+                                char: $$char,
+                                value: value
+                              };
+                      }));
+        }
+        
+      }
+      
+    }
+    
+  }
+  return {
+          TAG: /* Error */1,
+          _0: "failed to parse password: " + input + ""
+        };
 }
 
 function isValid1(password) {
@@ -89,18 +92,24 @@ function isValid1(password) {
 
 function isValid2(password) {
   var pair = password.pair;
-  var lastIdx = pair[1];
   var $$char = password.char;
   var chars = password.value.split("");
-  return Belt_Option.getWithDefault(Belt_Option.flatMap(Belt_Option.map(Belt_Array.get(chars, pair[0] - 1 | 0), (function (param) {
-                        return $$String.equal($$char, param);
-                      })), (function (firstMatched) {
-                    return Belt_Option.map(Belt_Option.map(Belt_Array.get(chars, lastIdx - 1 | 0), (function (param) {
-                                      return $$String.equal($$char, param);
-                                    })), (function (lastMatched) {
-                                  return firstMatched !== lastMatched;
-                                }));
-                  })), false);
+  var matches_0 = Belt_Option.map(Belt_Array.get(chars, pair[0] - 1 | 0), (function (param) {
+          return $$String.equal($$char, param);
+        }));
+  var matches_1 = Belt_Option.map(Belt_Array.get(chars, pair[1] - 1 | 0), (function (param) {
+          return $$String.equal($$char, param);
+        }));
+  var first = matches_0;
+  if (first === undefined) {
+    return false;
+  }
+  var last = matches_1;
+  if (last !== undefined) {
+    return first !== last;
+  } else {
+    return false;
+  }
 }
 
 function part1(input) {
