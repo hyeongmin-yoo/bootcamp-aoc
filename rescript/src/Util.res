@@ -52,3 +52,7 @@ module Result = {
     }
   }
 }
+
+module Print = {
+  let printResult = result => result->Result.fold(Js.log2("Err:"), Js.log2("Ok:"))
+}

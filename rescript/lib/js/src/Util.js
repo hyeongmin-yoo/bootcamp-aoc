@@ -89,8 +89,21 @@ var Result = {
   print: print
 };
 
+function printResult(result) {
+  fold(result, (function (param) {
+          console.log("Err:", param);
+        }), (function (param) {
+          console.log("Ok:", param);
+        }));
+}
+
+var Print = {
+  printResult: printResult
+};
+
 exports.$$Array = $$Array;
 exports.Input = Input;
 exports.$$String = $$String;
 exports.Result = Result;
+exports.Print = Print;
 /* No side effect */
