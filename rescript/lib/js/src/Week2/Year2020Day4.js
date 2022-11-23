@@ -142,9 +142,9 @@ function parseYear(input) {
             });
 }
 
-function parseBirthYear(input) {
+function parseYearInRange(input, min, max) {
   return Belt_Result.flatMap(parseYear(input), (function (year) {
-                if (Util.$$Range.inRange(year, 1920, 2002)) {
+                if (Util.$$Range.inRange(year, min, max)) {
                   return {
                           TAG: /* Ok */0,
                           _0: year
@@ -152,39 +152,7 @@ function parseBirthYear(input) {
                 } else {
                   return {
                           TAG: /* Error */1,
-                          _0: "invalid byr: " + input + ""
-                        };
-                }
-              }));
-}
-
-function parseIssueYear(input) {
-  return Belt_Result.flatMap(parseYear(input), (function (year) {
-                if (Util.$$Range.inRange(year, 2010, 2020)) {
-                  return {
-                          TAG: /* Ok */0,
-                          _0: year
-                        };
-                } else {
-                  return {
-                          TAG: /* Error */1,
-                          _0: "invalid iyr: " + input + ""
-                        };
-                }
-              }));
-}
-
-function parseExpYear(input) {
-  return Belt_Result.flatMap(parseYear(input), (function (year) {
-                if (Util.$$Range.inRange(year, 2020, 2030)) {
-                  return {
-                          TAG: /* Ok */0,
-                          _0: year
-                        };
-                } else {
-                  return {
-                          TAG: /* Error */1,
-                          _0: "invalid eyr: " + input + ""
+                          _0: "out of range (" + String(min) + "~" + String(max) + "): " + input + ""
                         };
                 }
               }));
@@ -327,27 +295,33 @@ function getValueWithParser(map, key, parser) {
 }
 
 function parsePassport2(map) {
-  var progress_0 = getValueWithParser(map, "byr", parseBirthYear);
-  var progress_1 = getValueWithParser(map, "iyr", parseIssueYear);
-  var progress_2 = getValueWithParser(map, "eyr", parseExpYear);
-  var progress_3 = getValueWithParser(map, "hgt", parseHeight);
-  var progress_4 = getValueWithParser(map, "hcl", parseHairColor);
-  var progress_5 = getValueWithParser(map, "ecl", parseEyeColor);
-  var progress_6 = getValueWithParser(map, "pid", parsePassportID);
-  var progress_7 = Belt_HashMapString.get(map, "cid");
-  var byr = progress_0;
+  var results_0 = getValueWithParser(map, "byr", (function (param) {
+          return parseYearInRange(param, 1920, 2002);
+        }));
+  var results_1 = getValueWithParser(map, "iyr", (function (param) {
+          return parseYearInRange(param, 2010, 2020);
+        }));
+  var results_2 = getValueWithParser(map, "eyr", (function (param) {
+          return parseYearInRange(param, 2020, 2030);
+        }));
+  var results_3 = getValueWithParser(map, "hgt", parseHeight);
+  var results_4 = getValueWithParser(map, "hcl", parseHairColor);
+  var results_5 = getValueWithParser(map, "ecl", parseEyeColor);
+  var results_6 = getValueWithParser(map, "pid", parsePassportID);
+  var results_7 = Belt_HashMapString.get(map, "cid");
+  var byr = results_0;
   if (byr.TAG === /* Ok */0) {
-    var iyr = progress_1;
+    var iyr = results_1;
     if (iyr.TAG === /* Ok */0) {
-      var eyr = progress_2;
+      var eyr = results_2;
       if (eyr.TAG === /* Ok */0) {
-        var hgt = progress_3;
+        var hgt = results_3;
         if (hgt.TAG === /* Ok */0) {
-          var hcl = progress_4;
+          var hcl = results_4;
           if (hcl.TAG === /* Ok */0) {
-            var ecl = progress_5;
+            var ecl = results_5;
             if (ecl.TAG === /* Ok */0) {
-              var pid = progress_6;
+              var pid = results_6;
               if (pid.TAG === /* Ok */0) {
                 return {
                         TAG: /* Ok */0,
@@ -359,7 +333,7 @@ function parsePassport2(map) {
                           hcl: hcl._0,
                           ecl: ecl._0,
                           pid: pid._0,
-                          cid: progress_7
+                          cid: results_7
                         }
                       };
               }
@@ -379,12 +353,12 @@ function parsePassport2(map) {
           TAG: /* Error */1,
           _0: Belt_Option.getWithDefault(Belt_Option.map(Util.$$Option.traverse([
                         Util.Result.toOption(Util.Result.swap(byr)),
-                        Util.Result.toOption(Util.Result.swap(progress_1)),
-                        Util.Result.toOption(Util.Result.swap(progress_2)),
-                        Util.Result.toOption(Util.Result.swap(progress_3)),
-                        Util.Result.toOption(Util.Result.swap(progress_4)),
-                        Util.Result.toOption(Util.Result.swap(progress_5)),
-                        Util.Result.toOption(Util.Result.swap(progress_6))
+                        Util.Result.toOption(Util.Result.swap(results_1)),
+                        Util.Result.toOption(Util.Result.swap(results_2)),
+                        Util.Result.toOption(Util.Result.swap(results_3)),
+                        Util.Result.toOption(Util.Result.swap(results_4)),
+                        Util.Result.toOption(Util.Result.swap(results_5)),
+                        Util.Result.toOption(Util.Result.swap(results_6))
                       ]), (function (__x) {
                       return __x.join(", ");
                     })), "fields are not fullfiled")
@@ -415,9 +389,7 @@ exports.parsePassport1 = parsePassport1;
 exports.part1 = part1;
 exports.getRegMatched = getRegMatched;
 exports.parseYear = parseYear;
-exports.parseBirthYear = parseBirthYear;
-exports.parseIssueYear = parseIssueYear;
-exports.parseExpYear = parseExpYear;
+exports.parseYearInRange = parseYearInRange;
 exports.parseLen = parseLen;
 exports.parseHeight = parseHeight;
 exports.parseHairColor = parseHairColor;

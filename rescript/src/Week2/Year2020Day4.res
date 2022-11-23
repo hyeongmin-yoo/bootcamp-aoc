@@ -73,8 +73,11 @@ let parsePassport1 = (map: passportData): result<passport1, string> => {
 */
 let part1 = input => {
   input
+  // string -> array<string>
   ->splitToPassportRaw
+  // map(string -> result<HashMapString<string>, string>)
   ->Array.map(parsePassportData)
+  // map(result<HashMapString<string>, string> -> result<passport1, string>)
   ->Array.map(Result.flatMap(_, parsePassport1))
   ->Array.keepMap(Util.Result.toOption)
   ->Array.length
@@ -132,27 +135,13 @@ let parseYear = (input): result<year, string> =>
   ->Option.flatMap(Int.fromString)
   ->Util.Result.fromOption(Error(`invalid format (year): ${input}`))
 
-let parseBirthYear = input => {
+let parseYearInRange = (input, ~min: int, ~max: int): result<year, string> => {
   input
   ->parseYear
   ->Result.flatMap(year =>
-    year->Util.Range.inRange(1920, 2002) ? Ok(year) : Error(`invalid byr: ${input}`)
-  )
-}
-
-let parseIssueYear = input => {
-  input
-  ->parseYear
-  ->Result.flatMap(year =>
-    year->Util.Range.inRange(2010, 2020) ? Ok(year) : Error(`invalid iyr: ${input}`)
-  )
-}
-
-let parseExpYear = input => {
-  input
-  ->parseYear
-  ->Result.flatMap(year =>
-    year->Util.Range.inRange(2020, 2030) ? Ok(year) : Error(`invalid eyr: ${input}`)
+    year->Util.Range.inRange(min, max)
+      ? Ok(year)
+      : Error(`out of range (${min->Int.toString}~${max->Int.toString}): ${input}`)
   )
 }
 
@@ -231,22 +220,26 @@ let getValueWithParser = (
 }
 
 let parsePassport2 = (map: passportData): result<passport2, string> => {
-  let progress = (
-    map->getValueWithParser("byr", parseBirthYear),
-    map->getValueWithParser("iyr", parseIssueYear),
-    map->getValueWithParser("eyr", parseExpYear),
+  let results = (
+    map->getValueWithParser("byr", parseYearInRange(~min=1920, ~max=2002)),
+    map->getValueWithParser("iyr", parseYearInRange(~min=2010, ~max=2020)),
+    map->getValueWithParser("eyr", parseYearInRange(~min=2020, ~max=2030)),
     map->getValueWithParser("hgt", parseHeight),
     map->getValueWithParser("hcl", parseHairColor),
     map->getValueWithParser("ecl", parseEyeColor),
     map->getValueWithParser("pid", parsePassportID),
     map->HashMap.String.get("cid"),
   )
-  switch progress {
+  switch results {
   | (Ok(byr), Ok(iyr), Ok(eyr), Ok(hgt), Ok(hcl), Ok(ecl), Ok(pid), cid) =>
     Ok({byr, iyr, eyr, hgt, hcl, ecl, pid, cid})
 
+  // 가능하면 파싱하면서 받은 에러메시지를 노출함.
   | (byr, iyr, eyr, hgt, hcl, ecl, pid, _) =>
     [
+      // 각 result 의 'a 타입이 달라 이것만으로 배열을 만들 수 없음.
+      // 배열 아이템의 타입을 맞추기 위해 option으로 변경함.
+      // result<'a, string> -> result<string, 'a> -> option<string>
       byr->Util.Result.swap->Util.Result.toOption,
       iyr->Util.Result.swap->Util.Result.toOption,
       eyr->Util.Result.swap->Util.Result.toOption,
@@ -255,7 +248,9 @@ let parsePassport2 = (map: passportData): result<passport2, string> => {
       ecl->Util.Result.swap->Util.Result.toOption,
       pid->Util.Result.swap->Util.Result.toOption,
     ]
+    // array<option<string>> -> option<array<string>>
     ->Util.Option.traverse
+    // option<array<string>> -> option<string>
     ->Option.map(Js.Array2.joinWith(_, ", "))
     ->Option.getWithDefault("fields are not fullfiled")
     ->Error
@@ -267,8 +262,11 @@ let parsePassport2 = (map: passportData): result<passport2, string> => {
 
 let part2 = input => {
   input
+  // string -> array<string>
   ->splitToPassportRaw
+  // map(string -> result<HashMapString<string>, string>)
   ->Array.map(parsePassportData)
+  // map(result<HashMapString<string>, string> -> result<passport2, string>)
   ->Array.map(Result.flatMap(_, parsePassport2))
   ->Array.keepMap(Util.Result.toOption)
   ->Array.length
