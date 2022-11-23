@@ -7,24 +7,14 @@ open Belt
 type fieldKey = string
 type fieldValue = string
 type fieldPair = (fieldKey, fieldValue)
-type len = Cm(int) | Inch(int)
 
 type passportData = HashMap.String.t<fieldValue>
-type passportProgress2 = {
-  byr: result<int, string>,
-  iyr: result<int, string>,
-  eyr: result<int, string>,
-  hgt: result<len, string>,
-  hcl: result<string, string>,
-  ecl: result<string, string>,
-  pid: result<string, string>,
-  cid: option<string>,
-}
-type passport2 = {
-  byr: int,
-  iyr: int,
-  eyr: int,
-  hgt: len,
+
+type passport1 = {
+  byr: string,
+  iyr: string,
+  eyr: string,
+  hgt: string,
   hcl: string,
   ecl: string,
   pid: string,
@@ -36,6 +26,7 @@ type passport2 = {
    (우선 parsePassport 타입의 타입 시그니처를 생각해보세요)
 */
 let splitToPassportRaw = input => input->Js.String2.split("\n\n")
+
 let normalizeSpaces = input => input->Js.String2.trim->Js.String2.replaceByRe(%re("/\s+/g"), " ")
 
 let parseFieldPair = (input): result<fieldPair, string> => {
@@ -48,6 +39,8 @@ let parseFieldPair = (input): result<fieldPair, string> => {
 
 let parsePassportData = (input): result<passportData, string> => {
   input
+  // 불규칙한 공백들을 정리
+  ->normalizeSpaces
   // 공백을 기준으로 분할
   ->Js.String2.split(" ")
   // 분할된 문자열을 fieldPair로 파싱
@@ -55,21 +48,87 @@ let parsePassportData = (input): result<passportData, string> => {
   ->Util.Result.traverse
   // 파싱된 필드들을 오브젝트로 변환
   ->Result.map(HashMap.String.fromArray)
-
-  /*
-   TODO: 아래와 같이 키를 동적으로 할당하려면 어떤 문법이 있는지.
-
-   ```ts
-   function foo ([key, value]: pair) {
-      return { [key]: value }
-   }
-   ```
- */
 }
 
-let parseYear = input =>
+let parsePassport1 = (map: passportData): result<passport1, string> => {
+  let results = (
+    map->HashMap.String.get("byr"),
+    map->HashMap.String.get("iyr"),
+    map->HashMap.String.get("eyr"),
+    map->HashMap.String.get("hgt"),
+    map->HashMap.String.get("hcl"),
+    map->HashMap.String.get("ecl"),
+    map->HashMap.String.get("pid"),
+    map->HashMap.String.get("cid"),
+  )
+  switch results {
+  | (Some(byr), Some(iyr), Some(eyr), Some(hgt), Some(hcl), Some(ecl), Some(pid), cid) =>
+    Ok({byr, iyr, eyr, hgt, hcl, ecl, pid, cid})
+  | _ => Error("fields are not fullfiled")
+  }
+}
+
+/*
+3. 올바른 Passport를 세는 countPassport 함수를 만들어서 문제를 해결해봅시다.
+*/
+let part1 = input => {
   input
-  ->Util.String.getExactlyMatched(%re("/^\d{4}$/"))
+  ->splitToPassportRaw
+  ->Array.map(parsePassportData)
+  ->Array.map(Result.flatMap(_, parsePassport1))
+  ->Array.keepMap(Util.Result.toOption)
+  ->Array.length
+}
+
+// ===== Part 2. =====
+/*
+4. part1과 동일하게, *문제를 그대로* 코드로 옮겨보세요.
+*/
+type year = int
+type hgt = Cm(int) | Inch(int)
+type hcl = string
+type ecl = Amb | Blu | Brn | Gry | Grn | Hzl | Oth
+type id = string
+
+type passport2 = {
+  byr: year,
+  iyr: year,
+  eyr: year,
+  hgt: hgt,
+  hcl: hcl,
+  ecl: ecl,
+  pid: id,
+  cid: option<id>,
+}
+
+// type hcl = BRW | ...
+// type height = Cm(int) | Inch(int)
+
+// part1 -> type passport1
+// part2 -> type passport2
+
+// 대수적 데이터 타입
+// 합타입(Sum type), 곱타입(Product type)
+// 배리언트가 합타입
+// 곱타입은 레코드, 오브젝트, 튜플
+
+// Algebraic Data Type
+// type color = RED | GREEN | BLUE
+// type x = {a: int, b: int, c: int}
+// type y = (int, int, int)
+// https://green-labs.github.io/algebraic-data-type
+
+let getRegMatched = (input, re) => {
+  re
+  ->Js.Re.exec_(input)
+  ->Belt.Option.map(Js.Re.captures)
+  ->Belt.Option.flatMap(Belt.Array.get(_, 0))
+  ->Belt.Option.flatMap(Js.Nullable.toOption)
+}
+
+let parseYear = (input): result<year, string> =>
+  input
+  ->getRegMatched(%re("/^\d{4}$/"))
   ->Option.flatMap(Int.fromString)
   ->Util.Result.fromOption(Error(`invalid format (year): ${input}`))
 
@@ -97,7 +156,7 @@ let parseExpYear = input => {
   )
 }
 
-let parseLen = (input): result<len, string> => {
+let parseLen = (input): result<hgt, string> => {
   %re("/^(\d+)(cm|in)/")
   ->Js.Re.exec_(input)
   ->Option.map(Js.Re.captures)
@@ -137,99 +196,96 @@ let parseHeight = input => {
   })
 }
 
-let parseHairColor = input => {
+let parseHairColor = (input): result<hcl, string> => {
   input
-  ->Util.String.getExactlyMatched(%re("/^#[0-9a-f]{6}$/"))
+  ->getRegMatched(%re("/^#[0-9a-f]{6}$/"))
   ->Util.Result.fromOption(Error(`invalid hcl: ${input}`))
 }
 
-let parseEyeColor = input => {
+let parseEyeColor = (input): result<ecl, string> => {
   switch input {
-  | "amb" | "blu" | "brn" | "gry" | "grn" | "hzl" | "oth" => Ok(input)
+  | "amb" => Amb->Ok
+  | "blu" => Blu->Ok
+  | "brn" => Brn->Ok
+  | "gry" => Gry->Ok
+  | "grn" => Grn->Ok
+  | "hzl" => Hzl->Ok
+  | "oth" => Oth->Ok
   | _ => Error(`invalid ecl: ${input}`)
   }
 }
 
-let parsePassportID = input => {
-  input
-  ->Util.String.getExactlyMatched(%re("/^\d{9}$/"))
-  ->Util.Result.fromOption(Error(`invalid pid: ${input}`))
+let parsePassportID = (input): result<id, string> => {
+  input->getRegMatched(%re("/^\d{9}$/"))->Util.Result.fromOption(Error(`invalid pid: ${input}`))
 }
 
-let getRequired = (map: passportData, key: string): result<string, string> => {
-  map->HashMap.String.get(key)->Util.Result.fromOption(Error(`${key} required`))
+let getValueWithParser = (
+  map: passportData,
+  key: string,
+  parser: string => result<'a, string>,
+): result<'a, string> => {
+  map
+  ->HashMap.String.get(key)
+  ->Util.Result.fromOption(Error(`${key} required`))
+  ->Result.flatMap(parser)
 }
 
 let parsePassport2 = (map: passportData): result<passport2, string> => {
-  let prog: passportProgress2 = {
-    byr: map->getRequired("byr")->Result.flatMap(parseBirthYear),
-    iyr: map->getRequired("iyr")->Result.flatMap(parseIssueYear),
-    eyr: map->getRequired("eyr")->Result.flatMap(parseExpYear),
-    hgt: map->getRequired("hgt")->Result.flatMap(parseHeight),
-    hcl: map->getRequired("hcl")->Result.flatMap(parseHairColor),
-    ecl: map->getRequired("ecl")->Result.flatMap(parseEyeColor),
-    pid: map->getRequired("pid")->Result.flatMap(parsePassportID),
-    cid: map->HashMap.String.get("cid"),
-  }
-  switch prog {
-  | {
-      byr: Ok(byr),
-      iyr: Ok(iyr),
-      eyr: Ok(eyr),
-      hgt: Ok(hgt),
-      hcl: Ok(hcl),
-      ecl: Ok(ecl),
-      pid: Ok(pid),
-      cid,
-    } =>
+  let progress = (
+    map->getValueWithParser("byr", parseBirthYear),
+    map->getValueWithParser("iyr", parseIssueYear),
+    map->getValueWithParser("eyr", parseExpYear),
+    map->getValueWithParser("hgt", parseHeight),
+    map->getValueWithParser("hcl", parseHairColor),
+    map->getValueWithParser("ecl", parseEyeColor),
+    map->getValueWithParser("pid", parsePassportID),
+    map->HashMap.String.get("cid"),
+  )
+  switch progress {
+  | (Ok(byr), Ok(iyr), Ok(eyr), Ok(hgt), Ok(hcl), Ok(ecl), Ok(pid), cid) =>
     Ok({byr, iyr, eyr, hgt, hcl, ecl, pid, cid})
 
-  | _ =>
+  | (byr, iyr, eyr, hgt, hcl, ecl, pid, _) =>
     [
-      prog.byr->Util.Result.toErrSome,
-      prog.iyr->Util.Result.toErrSome,
-      prog.eyr->Util.Result.toErrSome,
-      prog.hgt->Util.Result.toErrSome,
-      prog.hcl->Util.Result.toErrSome,
-      prog.ecl->Util.Result.toErrSome,
-      prog.pid->Util.Result.toErrSome,
+      byr->Util.Result.swap->Util.Result.toOption,
+      iyr->Util.Result.swap->Util.Result.toOption,
+      eyr->Util.Result.swap->Util.Result.toOption,
+      hgt->Util.Result.swap->Util.Result.toOption,
+      hcl->Util.Result.swap->Util.Result.toOption,
+      ecl->Util.Result.swap->Util.Result.toOption,
+      pid->Util.Result.swap->Util.Result.toOption,
     ]
-    ->Util.Option.concatSomes
-    ->Js.Array2.joinWith(_, ", ")
-    ->Util.String.withDefault("fields are not fullfiled")
+    ->Util.Option.traverse
+    ->Option.map(Js.Array2.joinWith(_, ", "))
+    ->Option.getWithDefault("fields are not fullfiled")
     ->Error
   }
 }
 
-/*
-3. 올바른 Passport를 세는 countPassport 함수를 만들어서 문제를 해결해봅시다.
-*/
-let part1 = input => {
+// type option<'a> = Some('a) | None
+// type result<'a, 'e> = Ok('a) | Error('e)
+
+let part2 = input => {
   input
   ->splitToPassportRaw
-  ->Array.map(normalizeSpaces)
   ->Array.map(parsePassportData)
   ->Array.map(Result.flatMap(_, parsePassport2))
   ->Array.keepMap(Util.Result.toOption)
   ->Array.length
 }
 
-// part2
-/*
-4. part1과 동일하게, *문제를 그대로* 코드로 옮겨보세요.
-*/
+let main = () => {
+  //   let input = Node.Fs.readFileAsUtf8Sync("input/Week2/Year2020Day4.sample.txt")
+  let input = Node.Fs.readFileAsUtf8Sync("input/Week2/Year2020Day4.input.txt")
+
+  input->part1->Js.log2("part1:", _)
+  input->part2->Js.log2("part2:", _)
+}
+
+let _ = main()
 
 /*
 참고 링크
 - https://rescript-lang.org/docs/manual/latest/record
 - https://lexi-lambda.github.io/blog/2019/11/05/parse-don-t-validate/
 */
-
-let main = () => {
-  //   let input = Node.Fs.readFileAsUtf8Sync("input/Week2/Year2020Day4.sample.txt")
-  let input = Node.Fs.readFileAsUtf8Sync("input/Week2/Year2020Day4.input.txt")
-
-  input->part1->Js.log2("part2:", _)
-}
-
-let _ = main()

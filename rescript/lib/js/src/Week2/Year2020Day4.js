@@ -38,11 +38,105 @@ function parseFieldPair(input) {
 }
 
 function parsePassportData(input) {
-  return Belt_Result.map(Util.Result.traverse(Belt_Array.map(input.split(" "), parseFieldPair)), Belt_HashMapString.fromArray);
+  return Belt_Result.map(Util.Result.traverse(Belt_Array.map(normalizeSpaces(input).split(" "), parseFieldPair)), Belt_HashMapString.fromArray);
+}
+
+function parsePassport1(map) {
+  var results_0 = Belt_HashMapString.get(map, "byr");
+  var results_1 = Belt_HashMapString.get(map, "iyr");
+  var results_2 = Belt_HashMapString.get(map, "eyr");
+  var results_3 = Belt_HashMapString.get(map, "hgt");
+  var results_4 = Belt_HashMapString.get(map, "hcl");
+  var results_5 = Belt_HashMapString.get(map, "ecl");
+  var results_6 = Belt_HashMapString.get(map, "pid");
+  var results_7 = Belt_HashMapString.get(map, "cid");
+  var byr = results_0;
+  if (byr === undefined) {
+    return {
+            TAG: /* Error */1,
+            _0: "fields are not fullfiled"
+          };
+  }
+  var iyr = results_1;
+  if (iyr === undefined) {
+    return {
+            TAG: /* Error */1,
+            _0: "fields are not fullfiled"
+          };
+  }
+  var eyr = results_2;
+  if (eyr === undefined) {
+    return {
+            TAG: /* Error */1,
+            _0: "fields are not fullfiled"
+          };
+  }
+  var hgt = results_3;
+  if (hgt === undefined) {
+    return {
+            TAG: /* Error */1,
+            _0: "fields are not fullfiled"
+          };
+  }
+  var hcl = results_4;
+  if (hcl === undefined) {
+    return {
+            TAG: /* Error */1,
+            _0: "fields are not fullfiled"
+          };
+  }
+  var ecl = results_5;
+  if (ecl === undefined) {
+    return {
+            TAG: /* Error */1,
+            _0: "fields are not fullfiled"
+          };
+  }
+  var pid = results_6;
+  if (pid !== undefined) {
+    return {
+            TAG: /* Ok */0,
+            _0: {
+              byr: byr,
+              iyr: iyr,
+              eyr: eyr,
+              hgt: hgt,
+              hcl: hcl,
+              ecl: ecl,
+              pid: pid,
+              cid: results_7
+            }
+          };
+  } else {
+    return {
+            TAG: /* Error */1,
+            _0: "fields are not fullfiled"
+          };
+  }
+}
+
+function part1(input) {
+  return Belt_Array.keepMap(Belt_Array.map(Belt_Array.map(input.split("\n\n"), parsePassportData), (function (__x) {
+                    return Belt_Result.flatMap(__x, parsePassport1);
+                  })), Util.Result.toOption).length;
+}
+
+function getRegMatched(input, re) {
+  return Belt_Option.flatMap(Belt_Option.flatMap(Belt_Option.map(Caml_option.null_to_opt(re.exec(input)), (function (prim) {
+                        return prim;
+                      })), (function (__x) {
+                    return Belt_Array.get(__x, 0);
+                  })), (function (prim) {
+                if (prim == null) {
+                  return ;
+                } else {
+                  return Caml_option.some(prim);
+                }
+              }));
 }
 
 function parseYear(input) {
-  return Util.Result.fromOption(Belt_Option.flatMap(Util.$$String.getExactlyMatched(input, /^\d{4}$/), Belt_Int.fromString), {
+  return Util.Result.fromOption(Belt_Option.flatMap(getRegMatched(input, /^\d{4}$/), Belt_Int.fromString), {
               TAG: /* Error */1,
               _0: "invalid format (year): " + input + ""
             });
@@ -167,7 +261,7 @@ function parseHeight(input) {
 }
 
 function parseHairColor(input) {
-  return Util.Result.fromOption(Util.$$String.getExactlyMatched(input, /^#[0-9a-f]{6}$/), {
+  return Util.Result.fromOption(getRegMatched(input, /^#[0-9a-f]{6}$/), {
               TAG: /* Error */1,
               _0: "invalid hcl: " + input + ""
             });
@@ -176,15 +270,39 @@ function parseHairColor(input) {
 function parseEyeColor(input) {
   switch (input) {
     case "amb" :
+        return {
+                TAG: /* Ok */0,
+                _0: /* Amb */0
+              };
     case "blu" :
+        return {
+                TAG: /* Ok */0,
+                _0: /* Blu */1
+              };
     case "brn" :
+        return {
+                TAG: /* Ok */0,
+                _0: /* Brn */2
+              };
     case "grn" :
+        return {
+                TAG: /* Ok */0,
+                _0: /* Grn */4
+              };
     case "gry" :
+        return {
+                TAG: /* Ok */0,
+                _0: /* Gry */3
+              };
     case "hzl" :
+        return {
+                TAG: /* Ok */0,
+                _0: /* Hzl */5
+              };
     case "oth" :
         return {
                 TAG: /* Ok */0,
-                _0: input
+                _0: /* Oth */6
               };
     default:
       return {
@@ -195,41 +313,41 @@ function parseEyeColor(input) {
 }
 
 function parsePassportID(input) {
-  return Util.Result.fromOption(Util.$$String.getExactlyMatched(input, /^\d{9}$/), {
+  return Util.Result.fromOption(getRegMatched(input, /^\d{9}$/), {
               TAG: /* Error */1,
               _0: "invalid pid: " + input + ""
             });
 }
 
-function getRequired(map, key) {
-  return Util.Result.fromOption(Belt_HashMapString.get(map, key), {
-              TAG: /* Error */1,
-              _0: "" + key + " required"
-            });
+function getValueWithParser(map, key, parser) {
+  return Belt_Result.flatMap(Util.Result.fromOption(Belt_HashMapString.get(map, key), {
+                  TAG: /* Error */1,
+                  _0: "" + key + " required"
+                }), parser);
 }
 
 function parsePassport2(map) {
-  var prog_byr = Belt_Result.flatMap(getRequired(map, "byr"), parseBirthYear);
-  var prog_iyr = Belt_Result.flatMap(getRequired(map, "iyr"), parseIssueYear);
-  var prog_eyr = Belt_Result.flatMap(getRequired(map, "eyr"), parseExpYear);
-  var prog_hgt = Belt_Result.flatMap(getRequired(map, "hgt"), parseHeight);
-  var prog_hcl = Belt_Result.flatMap(getRequired(map, "hcl"), parseHairColor);
-  var prog_ecl = Belt_Result.flatMap(getRequired(map, "ecl"), parseEyeColor);
-  var prog_pid = Belt_Result.flatMap(getRequired(map, "pid"), parsePassportID);
-  var prog_cid = Belt_HashMapString.get(map, "cid");
-  var byr = prog_byr;
+  var progress_0 = getValueWithParser(map, "byr", parseBirthYear);
+  var progress_1 = getValueWithParser(map, "iyr", parseIssueYear);
+  var progress_2 = getValueWithParser(map, "eyr", parseExpYear);
+  var progress_3 = getValueWithParser(map, "hgt", parseHeight);
+  var progress_4 = getValueWithParser(map, "hcl", parseHairColor);
+  var progress_5 = getValueWithParser(map, "ecl", parseEyeColor);
+  var progress_6 = getValueWithParser(map, "pid", parsePassportID);
+  var progress_7 = Belt_HashMapString.get(map, "cid");
+  var byr = progress_0;
   if (byr.TAG === /* Ok */0) {
-    var iyr = prog_iyr;
+    var iyr = progress_1;
     if (iyr.TAG === /* Ok */0) {
-      var eyr = prog_eyr;
+      var eyr = progress_2;
       if (eyr.TAG === /* Ok */0) {
-        var hgt = prog_hgt;
+        var hgt = progress_3;
         if (hgt.TAG === /* Ok */0) {
-          var hcl = prog_hcl;
+          var hcl = progress_4;
           if (hcl.TAG === /* Ok */0) {
-            var ecl = prog_ecl;
+            var ecl = progress_5;
             if (ecl.TAG === /* Ok */0) {
-              var pid = prog_pid;
+              var pid = progress_6;
               if (pid.TAG === /* Ok */0) {
                 return {
                         TAG: /* Ok */0,
@@ -241,7 +359,7 @@ function parsePassport2(map) {
                           hcl: hcl._0,
                           ecl: ecl._0,
                           pid: pid._0,
-                          cid: prog_cid
+                          cid: progress_7
                         }
                       };
               }
@@ -259,20 +377,22 @@ function parsePassport2(map) {
   }
   return {
           TAG: /* Error */1,
-          _0: Util.$$String.withDefault(Util.$$Option.concatSomes([
-                      Util.Result.toErrSome(prog_byr),
-                      Util.Result.toErrSome(prog_iyr),
-                      Util.Result.toErrSome(prog_eyr),
-                      Util.Result.toErrSome(prog_hgt),
-                      Util.Result.toErrSome(prog_hcl),
-                      Util.Result.toErrSome(prog_ecl),
-                      Util.Result.toErrSome(prog_pid)
-                    ]).join(", "), "fields are not fullfiled")
+          _0: Belt_Option.getWithDefault(Belt_Option.map(Util.$$Option.traverse([
+                        Util.Result.toOption(Util.Result.swap(byr)),
+                        Util.Result.toOption(Util.Result.swap(progress_1)),
+                        Util.Result.toOption(Util.Result.swap(progress_2)),
+                        Util.Result.toOption(Util.Result.swap(progress_3)),
+                        Util.Result.toOption(Util.Result.swap(progress_4)),
+                        Util.Result.toOption(Util.Result.swap(progress_5)),
+                        Util.Result.toOption(Util.Result.swap(progress_6))
+                      ]), (function (__x) {
+                      return __x.join(", ");
+                    })), "fields are not fullfiled")
         };
 }
 
-function part1(input) {
-  return Belt_Array.keepMap(Belt_Array.map(Belt_Array.map(Belt_Array.map(input.split("\n\n"), normalizeSpaces), parsePassportData), (function (__x) {
+function part2(input) {
+  return Belt_Array.keepMap(Belt_Array.map(Belt_Array.map(input.split("\n\n"), parsePassportData), (function (__x) {
                     return Belt_Result.flatMap(__x, parsePassport2);
                   })), Util.Result.toOption).length;
 }
@@ -280,7 +400,9 @@ function part1(input) {
 function main(param) {
   var input = Fs.readFileSync("input/Week2/Year2020Day4.input.txt", "utf8");
   var __x = part1(input);
-  console.log("part2:", __x);
+  console.log("part1:", __x);
+  var __x$1 = part2(input);
+  console.log("part2:", __x$1);
 }
 
 main(undefined);
@@ -289,6 +411,9 @@ exports.splitToPassportRaw = splitToPassportRaw;
 exports.normalizeSpaces = normalizeSpaces;
 exports.parseFieldPair = parseFieldPair;
 exports.parsePassportData = parsePassportData;
+exports.parsePassport1 = parsePassport1;
+exports.part1 = part1;
+exports.getRegMatched = getRegMatched;
 exports.parseYear = parseYear;
 exports.parseBirthYear = parseBirthYear;
 exports.parseIssueYear = parseIssueYear;
@@ -298,8 +423,8 @@ exports.parseHeight = parseHeight;
 exports.parseHairColor = parseHairColor;
 exports.parseEyeColor = parseEyeColor;
 exports.parsePassportID = parsePassportID;
-exports.getRequired = getRequired;
+exports.getValueWithParser = getValueWithParser;
 exports.parsePassport2 = parsePassport2;
-exports.part1 = part1;
+exports.part2 = part2;
 exports.main = main;
 /*  Not a pure module */
