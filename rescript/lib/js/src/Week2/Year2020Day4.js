@@ -398,7 +398,7 @@ function part2(input) {
 }
 
 function main(param) {
-  var input = Fs.readFileSync("input/Week2/Year2020Day4.input.txt", "utf8");
+  var input = Fs.readFileSync("input/Week2/Year2020Day4.input.txt", { "encoding": "utf8" });
   var __x = part1(input);
   console.log("part1:", __x);
   var __x$1 = part2(input);

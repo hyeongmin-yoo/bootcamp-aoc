@@ -275,8 +275,8 @@ let part2 = input => {
 }
 
 let main = () => {
-  //   let input = Node.Fs.readFileAsUtf8Sync("input/Week2/Year2020Day4.sample.txt")
-  let input = Node.Fs.readFileAsUtf8Sync("input/Week2/Year2020Day4.input.txt")
+  // let input = Util.Input.readFile("input/Week2/Year2020Day4.sample.txt")
+  let input = Util.Input.readFile("input/Week2/Year2020Day4.input.txt")
 
   input->part1->Js.log2("part1:", _)
   input->part2->Js.log2("part2:", _)

@@ -19,15 +19,9 @@ var $$Array = {
   tap: tap
 };
 
-function toArray(input) {
-  return input.trim().split("\n");
-}
+var Input = {};
 
-var Input = {
-  toArray: toArray
-};
-
-function toArray$1(str) {
+function toArray(str) {
   return Array.from(str);
 }
 
@@ -41,7 +35,7 @@ function divide(str, anchor) {
 }
 
 var $$String = {
-  toArray: toArray$1,
+  toArray: toArray,
   divide: divide
 };
 

@@ -8,9 +8,8 @@ module Array = {
 }
 
 module Input = {
-  let toArray = (input: string): array<string> => {
-    input->Js.String2.trim->Js.String2.split("\n")
-  }
+  @module("fs")
+  external readFile: (string, @as(json`{ "encoding": "utf8" }`) _) => string = "readFileSync"
 }
 
 module String = {
