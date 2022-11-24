@@ -8,8 +8,15 @@ module Array = {
 }
 
 module Input = {
-  let toArray = (input: string): array<string> => {
-    input->Js.String2.trim->Js.String2.split("\n")
+  @module("fs")
+  external readFile: (string, @as(json`{ "encoding": "utf8" }`) _) => string = "readFileSync"
+}
+
+module Option = {
+  let traverse = (items: array<option<'a>>): option<array<'a>> => {
+    items->Belt.Array.reduce(Some([]), (acc, it) => {
+      acc->Belt.Option.flatMap(prev => it->Belt.Option.map(val => prev->Belt.Array.concat([val])))
+    })
   }
 }
 
@@ -23,6 +30,14 @@ module String = {
     let first = str->Js.String2.slice(~from=0, ~to_=anchor)
     let last = str->Js.String2.sliceToEnd(~from=anchor)
     (first, last)
+  }
+
+  let getMatchs = (str, re) => {
+    re
+    ->Js.Re.exec_(str)
+    ->Belt.Option.map(Js.Re.captures)
+    ->Belt.Option.map(Belt.Array.map(_, Js.Nullable.toOption))
+    ->Belt.Option.flatMap(Option.traverse)
   }
 }
 
@@ -44,6 +59,12 @@ module Result = {
       r->Belt.Result.flatMap(prev => it->Belt.Result.map(val => prev->Belt.Array.concat([val])))
     )
   }
+  let swap = (result: result<'a, 'b>): result<'b, 'a> => {
+    switch result {
+    | Ok(val) => Error(val)
+    | Error(val) => Ok(val)
+    }
+  }
 
   let print = result => {
     switch result {
@@ -51,4 +72,8 @@ module Result = {
     | Error(val) => Js.log2("Err:", val)
     }
   }
+}
+
+module Range = {
+  let inRange = (val, min, max) => min <= val && val <= max
 }

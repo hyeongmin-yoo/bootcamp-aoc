@@ -2,7 +2,9 @@
 'use strict';
 
 var Curry = require("rescript/lib/js/curry.js");
+var Caml_obj = require("rescript/lib/js/caml_obj.js");
 var Belt_Array = require("rescript/lib/js/belt_Array.js");
+var Belt_Option = require("rescript/lib/js/belt_Option.js");
 var Belt_Result = require("rescript/lib/js/belt_Result.js");
 var Caml_option = require("rescript/lib/js/caml_option.js");
 
@@ -17,15 +19,23 @@ var $$Array = {
   tap: tap
 };
 
-function toArray(input) {
-  return input.trim().split("\n");
+var Input = {};
+
+function traverse(items) {
+  return Belt_Array.reduce(items, [], (function (acc, it) {
+                return Belt_Option.flatMap(acc, (function (prev) {
+                              return Belt_Option.map(it, (function (val) {
+                                            return Belt_Array.concat(prev, [val]);
+                                          }));
+                            }));
+              }));
 }
 
-var Input = {
-  toArray: toArray
+var $$Option = {
+  traverse: traverse
 };
 
-function toArray$1(str) {
+function toArray(str) {
   return Array.from(str);
 }
 
@@ -38,9 +48,24 @@ function divide(str, anchor) {
         ];
 }
 
+function getMatchs(str, re) {
+  return Belt_Option.flatMap(Belt_Option.map(Belt_Option.map(Caml_option.null_to_opt(re.exec(str)), (function (prim) {
+                        return prim;
+                      })), (function (__x) {
+                    return Belt_Array.map(__x, (function (prim) {
+                                  if (prim == null) {
+                                    return ;
+                                  } else {
+                                    return Caml_option.some(prim);
+                                  }
+                                }));
+                  })), traverse);
+}
+
 var $$String = {
-  toArray: toArray$1,
-  divide: divide
+  toArray: toArray,
+  divide: divide,
+  getMatchs: getMatchs
 };
 
 function toOption(result) {
@@ -61,7 +86,7 @@ function fromOption(option, fromNone) {
   }
 }
 
-function traverse(results) {
+function traverse$1(results) {
   return Belt_Array.reduce(results, {
               TAG: /* Ok */0,
               _0: []
@@ -72,6 +97,20 @@ function traverse(results) {
                                           }));
                             }));
               }));
+}
+
+function swap(result) {
+  if (result.TAG === /* Ok */0) {
+    return {
+            TAG: /* Error */1,
+            _0: result._0
+          };
+  } else {
+    return {
+            TAG: /* Ok */0,
+            _0: result._0
+          };
+  }
 }
 
 function print(result) {
@@ -85,12 +124,27 @@ function print(result) {
 var Result = {
   toOption: toOption,
   fromOption: fromOption,
-  traverse: traverse,
+  traverse: traverse$1,
+  swap: swap,
   print: print
+};
+
+function inRange(val, min, max) {
+  if (Caml_obj.lessequal(min, val)) {
+    return Caml_obj.lessequal(val, max);
+  } else {
+    return false;
+  }
+}
+
+var $$Range = {
+  inRange: inRange
 };
 
 exports.$$Array = $$Array;
 exports.Input = Input;
+exports.$$Option = $$Option;
 exports.$$String = $$String;
 exports.Result = Result;
+exports.$$Range = $$Range;
 /* No side effect */
