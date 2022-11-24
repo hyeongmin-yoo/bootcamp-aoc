@@ -219,6 +219,12 @@ let getValueWithParser = (
   ->Result.flatMap(parser)
 }
 
+// vFn: a -> b
+// data: Array, Option
+// map: (data, vFn) -> result<t, string> 이거시 모나드인가요??
+
+// map: F(a) -> (a -> b) -> F(b)
+
 let parsePassport2 = (map: passportData): result<passport2, string> => {
   let results = (
     map->getValueWithParser("byr", parseYearInRange(~min=1920, ~max=2002)),
@@ -256,6 +262,8 @@ let parsePassport2 = (map: passportData): result<passport2, string> => {
     ->Error
   }
 }
+// Applicative validation: Applicative Functor 를 이용한 validation
+// https://book.purescript.org/chapter7.html
 
 // type option<'a> = Some('a) | None
 // type result<'a, 'e> = Ok('a) | Error('e)
