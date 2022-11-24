@@ -21,6 +21,20 @@ var $$Array = {
 
 var Input = {};
 
+function traverse(items) {
+  return Belt_Array.reduce(items, [], (function (acc, it) {
+                return Belt_Option.flatMap(acc, (function (prev) {
+                              return Belt_Option.map(it, (function (val) {
+                                            return Belt_Array.concat(prev, [val]);
+                                          }));
+                            }));
+              }));
+}
+
+var $$Option = {
+  traverse: traverse
+};
+
 function toArray(str) {
   return Array.from(str);
 }
@@ -34,9 +48,24 @@ function divide(str, anchor) {
         ];
 }
 
+function getMatchs(str, re) {
+  return Belt_Option.flatMap(Belt_Option.map(Belt_Option.map(Caml_option.null_to_opt(re.exec(str)), (function (prim) {
+                        return prim;
+                      })), (function (__x) {
+                    return Belt_Array.map(__x, (function (prim) {
+                                  if (prim == null) {
+                                    return ;
+                                  } else {
+                                    return Caml_option.some(prim);
+                                  }
+                                }));
+                  })), traverse);
+}
+
 var $$String = {
   toArray: toArray,
-  divide: divide
+  divide: divide,
+  getMatchs: getMatchs
 };
 
 function toOption(result) {
@@ -57,7 +86,7 @@ function fromOption(option, fromNone) {
   }
 }
 
-function traverse(results) {
+function traverse$1(results) {
   return Belt_Array.reduce(results, {
               TAG: /* Ok */0,
               _0: []
@@ -95,23 +124,9 @@ function print(result) {
 var Result = {
   toOption: toOption,
   fromOption: fromOption,
-  traverse: traverse,
+  traverse: traverse$1,
   swap: swap,
   print: print
-};
-
-function traverse$1(items) {
-  return Belt_Array.reduce(items, [], (function (acc, it) {
-                return Belt_Option.flatMap(acc, (function (prev) {
-                              return Belt_Option.map(it, (function (val) {
-                                            return Belt_Array.concat(prev, [val]);
-                                          }));
-                            }));
-              }));
-}
-
-var $$Option = {
-  traverse: traverse$1
 };
 
 function inRange(val, min, max) {
@@ -128,8 +143,8 @@ var $$Range = {
 
 exports.$$Array = $$Array;
 exports.Input = Input;
+exports.$$Option = $$Option;
 exports.$$String = $$String;
 exports.Result = Result;
-exports.$$Option = $$Option;
 exports.$$Range = $$Range;
 /* No side effect */
